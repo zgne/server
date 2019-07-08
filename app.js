@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
 var { Mongoose } = require('./utils/config');
+const tokenUtil = require('./utils/token');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -31,7 +32,27 @@ app.use(function(req, res, next) {
   next(createError(404));
 });
 
+// 校验中间件
+app.use((req,res,next)=>{
+  // 检验token是否过期
+  if(req.url !== '/api/users/register'){
+    let token = req.headers.token;
+    const resDecode = tokenUtil.checkToken(token);
+    if(!resDecode){
+      res.send({
+        msg: '登录已过期，请重新登录',
+        status: 403
+      })
+    }else{
+      next()
+    }
+  }else{
+    next()
+  }
+});
+
 // error handler
+//原error handler
 app.use(function(err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
