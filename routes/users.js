@@ -11,6 +11,6 @@ router.post('/login',controllerUser.login);
 router.post('/register',controllerUser.register);
 router.get('/verify',controllerUser.verify);
 router.get('/logout',controllerUser.logout);
-router.post('/getUser',controllerUser.getUser);
-router.post('/findPassword',controllerUser.findPassword);
+router.get('/getUser',controllerUser.getUser);
+router.post('/resetPassword',controllerUser.resetPassword);
 module.exports = router;

@@ -2,14 +2,31 @@ const {Email} = require('../utils/config');
 const tokenUtil = require('../utils/token');
 const userModel = require('../models/index');
 
-var login = async (req, res, next) => {
+var login = async (req, res, next) => { // 用户登录
 	const { username, email, password } = req.body;
 	const loginResult = await userModel.findLogin(username,email,password);
 	if( loginResult ){
-		console.log('登录成功');
+		// console.log(loginResult);
+		/**
+		 * 		console.log(loginResult);
+		 * {  date: 2019-07-08T07:46:37.378Z,
+				  _id: 5d22f4f767c19450e058ea6d,
+				  username: 'zgne',
+				  password: 'aaaaaaa',
+				  email: 'zg17805106202@163.com',
+				  __v: 0 }
+
+		 */
+		let token = tokenUtil.createToken(loginResult,60*60);
+		/** let token1 = tokenUtil.createToken(loginResult,60*60); //与上面一样，因为时间相差很少
+		 *  console.log(token);
+		 *  console.log(token1);
+		 */
+
 		res.send({
 			msg: '登录成功',
-			status: 0
+			status: 0,
+			token
 		})
 	}else{
 		console.log('登录失败');
@@ -20,10 +37,10 @@ var login = async (req, res, next) => {
 	}
 };
 
-var register = async (req, res, next) => {
+var register = async (req, res, next) => { // 注册
 	console.log(0);
 	var {username, password, email, verify} = req.body;
-	const userToken = req.body.token;
+	const userToken = req.headers.token;
 	const data = {
 		email: email,
 		verifyCode: verify
@@ -60,7 +77,7 @@ var register = async (req, res, next) => {
 
 	}
 
-	const result = userModel.save({
+	const result = userModel.save({// 将数据保存到数据库中，密码应该加密后保存
 		username,
 		password,
 		email
@@ -81,7 +98,7 @@ var register = async (req, res, next) => {
 	}
 };
 
-var verify = async (req, res, next) => {
+var verify = async (req, res, next) => { // 发送验证码
 	const email = req.query.email;
 	const verifyCode = Email.verify;
 	const data = {
@@ -113,15 +130,57 @@ var verify = async (req, res, next) => {
 };
 
 var logout = async (req, res, next) => {
-
+	req.headers.token = '';
+	res.send({
+		msg: '退出成功',
+		status: 0,
+		token: ''
+	})
 };
 
 var getUser = async (req, res, next) => {
-
+// app.js 中间件校验代码相同
+// 	console.log(1);
+	const token = req.headers.token;
+	const resultToken = tokenUtil.decodeToken(token);
+	const result = tokenUtil.checkToken(token);
+	const username = resultToken.payload.data.username;
+	if(result && username){
+		// console.log(2);
+		res.send({
+			msg: '获取用户信息成功',
+			status: 0,
+			data: {
+				username: username
+			}
+		})
+	}else{
+		// console.log(3);
+		res.send({
+			msg: '获取用户信息失败',
+			status: -1
+		})
+	}
 };
 
-var findPassword = async (req, res, next) => {
-
+var resetPassword = async (req, res, next) => {
+	let { email, verify, password } = req.body;
+	const token = req.headers.token;
+	const resultToken = tokenUtil.decodeToken(token);
+	const payloadData = resultToken.payload.data;
+	// console.log(payloadData);
+	if(payloadData.email === email && payloadData.verifyCode === verify){
+		// console.log(1);
+		const resetPwdResult = await userModel.resetPwd(email,password);
+		// console.log(resetPwdResult);
+		resetPwdResult? res.send({
+			msg: '修改密码成功',
+			status: 0
+		}): res.send({
+			msg: '修改密码失败',
+			status: -1
+		})
+	}
 };
 
 module.exports = {
@@ -130,6 +189,6 @@ module.exports = {
 	verify,
 	logout,
 	getUser,
-	findPassword
+	resetPassword
 };
 
